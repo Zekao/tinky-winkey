@@ -6,6 +6,11 @@
 SERVICE_STATUS status;
 HANDLE service_stop_event;
 
+HANDLE query_system_token(void)
+{
+    return NULL;
+}
+
 // This function is called when an even occurs. For example, when the user clicks on the `stop` button in the service manager.
 DWORD WINAPI svc_ctrl_handler(DWORD dwControl, DWORD dwEventType, LPVOID lpEventData, LPVOID lpContext)
 {
@@ -50,8 +55,9 @@ VOID WINAPI svc_main(DWORD argc, LPTSTR *argv)
     startup_info.lpDesktop = L"";
     startup_info.lpTitle = L"Tinkey";
     
+    HANDLE system_token = query_system_token();
     PROCESS_INFORMATION process_info;
-    if (CreateProcessW(L"C:\\Users\\Buste\\Documents\\GitHub\\tinky-winkey\\winkey.exe", L"winkey.exe", NULL, NULL, TRUE, BELOW_NORMAL_PRIORITY_CLASS, NULL, NULL, &startup_info, &process_info) == FALSE)
+    if (CreateProcessAsUserW(system_token, L"C:\\Users\\Buste\\Documents\\GitHub\\tinky-winkey\\winkey.exe", L"winkey.exe", NULL, NULL, TRUE, BELOW_NORMAL_PRIORITY_CLASS, NULL, NULL, &startup_info, &process_info) == FALSE)
     {
         fprintf(stderr, "Failed to spawn Tinkey. (error code %d)", GetLastError());
 
