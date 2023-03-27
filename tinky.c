@@ -3,8 +3,17 @@
 
 #define TINKY_NAME L"Tinky"
 
+SERVICE_STATUS status;
+HANDLE service_stop_event;
+
 DWORD WINAPI svc_ctrl_handler(DWORD dwControl, DWORD dwEventType, LPVOID lpEventData, LPVOID lpContext)
 {
+    if (dwControl == SERVICE_CONTROL_STOP) {
+        if (status.dwCurrentState != SERVICE_RUNNING)
+            return 0;
+        
+        SetEvent(service_stop_event);
+    }
     return 0;
 }
 
@@ -20,7 +29,6 @@ VOID WINAPI svc_main(DWORD argc, LPTSTR *argv)
         return 1;
     }
 
-    SERVICE_STATUS status;
     status.dwServiceType = SERVICE_WIN32_OWN_PROCESS;  // We own a process.
     status.dwCurrentState = SERVICE_START_PENDING;     // We are currently starting the service.
     status.dwControlsAccepted = 0;                     // The service cannot be stopped yet (we're starting...)
@@ -51,8 +59,8 @@ VOID WINAPI svc_main(DWORD argc, LPTSTR *argv)
         return 1;
     }
 
-    HANDLE stop_event = CreateEventW(NULL, TRUE, FALSE, NULL);
-    if (!stop_event)
+    service_stop_event = CreateEventW(NULL, TRUE, FALSE, NULL);
+    if (!service_stop_event)
     {
         fprintf(stderr, "Failed to create the STOP event. (error code %d)", GetLastError());
 
@@ -67,7 +75,7 @@ VOID WINAPI svc_main(DWORD argc, LPTSTR *argv)
     SetServiceStatus(status_handle, &status);
 
     // Wait for the STOP event.
-    if (WaitForSingleObject(stop_event, INFINITE) == WAIT_FAILED) 
+    if (WaitForSingleObject(service_stop_event, INFINITE) == WAIT_FAILED) 
     {
         fprintf(stderr, "Failed to wait for the STOP event. (error code %d)", GetLastError());
 
@@ -75,11 +83,11 @@ VOID WINAPI svc_main(DWORD argc, LPTSTR *argv)
         status.dwWin32ExitCode = 1;
         SetServiceStatus(status_handle, &status);
 
-        CloseHandle(stop_event);
+        CloseHandle(service_stop_event);
         return 1;
     }
 
-    CloseHandle(stop_event);
+    CloseHandle(service_stop_event);
 
     status.dwCurrentState = SERVICE_STOP_PENDING;
     SetServiceStatus(status_handle, &status);
