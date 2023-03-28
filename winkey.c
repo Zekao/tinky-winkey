@@ -6,7 +6,7 @@
 /*   By: emaugale <emaugale@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2023/03/25 18:35:47 by emaugale          #+#    #+#             */
-/*   Updated: 2023/03/28 20:09:52 by emaugale         ###   ########.fr       */
+/*   Updated: 2023/03/29 01:57:39 by emaugale         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -109,33 +109,69 @@ void    handleSpecial(int vkCode, char *key_pressed) {
 
 int    specialCombinaison(int vkCode, char *key_pressed) {
     /*
-        // In this function, we handle all the special combinaisons for a QWERTY layout.
+        // Attributing a value to all the "special" keys in order to make them readable for the user.
+
+        // vkCode: The virtual key code of the key pressed.
+        // key_pressed: The string that will be returned to the user.
+
+        // Return: 1 if the key is a special key, 0 otherwise.
+
+        // Note: This function is currently working for AZERTY and QWERTY layouts, we don't handle more layouts because it's not really pertinent
+        //       to map all existing layouts. If we found a smarter way to do it, we will implement it to handle more layouts.
     */
 
+
     if (shift_pressed[0] || shift_pressed[1]) {
-        HKL layout = GetKeyboardLayout(0); // Get current keyboard layout
-        switch (vkCode) {
-            case VK_OEM_PLUS:               return (key_pressed = strcpy(key_pressed, "+"), 1);
-            case VK_OEM_MINUS:              return (key_pressed = strcpy(key_pressed, "_"), 1);
-            case 0x39:                      return (key_pressed = strcpy(key_pressed, "("), 1);
-            case 0x38:                      return (key_pressed = strcpy(key_pressed, "*"), 1);
-            case 0x37:                      return (key_pressed = strcpy(key_pressed, "&"), 1);
-            case 0x36:                      return (key_pressed = strcpy(key_pressed, "^"), 1);
-            case 0x35:                      return (key_pressed = strcpy(key_pressed, "%"), 1);
-            case 0x34:                      return (key_pressed = strcpy(key_pressed, "$"), 1);
-            case 0x33:                      return (key_pressed = strcpy(key_pressed, "#"), 1);
-            case 0x32:                      return (key_pressed = strcpy(key_pressed, "@"), 1);
-            case 0x31:                      return (key_pressed = strcpy(key_pressed, "!"), 1);
-            case 0x30:                      return (key_pressed = strcpy(key_pressed, ")"), 1);
-            case VK_OEM_COMMA:              return (key_pressed = strcpy(key_pressed, "<"), 1);
-            case VK_OEM_PERIOD:             return (key_pressed = strcpy(key_pressed, ">"), 1);
-            case VK_OEM_1:                  return (key_pressed = strcpy(key_pressed, ":"), 1);
-            case VK_OEM_2:                  return (key_pressed = strcpy(key_pressed, "?"), 1);
-            case VK_OEM_4:                  return (key_pressed = strcpy(key_pressed, "{"), 1);
-            case VK_OEM_5:                  return (key_pressed = strcpy(key_pressed, "|"), 1);
-            case VK_OEM_6:                  return (key_pressed = strcpy(key_pressed, "}"), 1);
-            case VK_OEM_7:                  return (key_pressed = strcpy(key_pressed, "\""), 1);
-        }
+        HKL layout = GetKeyboardLayout(0);
+        switch (LOWORD(layout)) {
+            case 0x040C: // FR
+                switch (vkCode) {
+                    case 0x30:                      return (key_pressed = strcpy(key_pressed, "0"), 1);
+                    case 0x31:                      return (key_pressed = strcpy(key_pressed, "1"), 1);
+                    case 0x32:                      return (key_pressed = strcpy(key_pressed, "2"), 1);
+                    case 0x33:                      return (key_pressed = strcpy(key_pressed, "3"), 1);
+                    case 0x34:                      return (key_pressed = strcpy(key_pressed, "4"), 1);
+                    case 0x35:                      return (key_pressed = strcpy(key_pressed, "5"), 1);
+                    case 0x36:                      return (key_pressed = strcpy(key_pressed, "6"), 1);
+                    case 0x37:                      return (key_pressed = strcpy(key_pressed, "7"), 1);
+                    case 0x38:                      return (key_pressed = strcpy(key_pressed, "8"), 1);
+                    case 0x39:                      return (key_pressed = strcpy(key_pressed, "9"), 1);
+                    case VK_OEM_PLUS:               return (key_pressed = strcpy(key_pressed, "+"), 1);
+                    case VK_OEM_MINUS:              return (key_pressed = strcpy(key_pressed, "°"), 1);
+                    case VK_OEM_COMMA:              return (key_pressed = strcpy(key_pressed, "?"), 1);
+                    case VK_OEM_PERIOD:             return (key_pressed = strcpy(key_pressed, "."), 1);
+                    case VK_OEM_1:                  return (key_pressed = strcpy(key_pressed, "£"), 1);
+                    case VK_OEM_2:                  return (key_pressed = strcpy(key_pressed, "/"), 1);
+                    case VK_OEM_3:                  return (key_pressed = strcpy(key_pressed, "%"), 1);
+                    case VK_OEM_4:                  return (key_pressed = strcpy(key_pressed, "°"), 1);
+                    case VK_OEM_5:                  return (key_pressed = strcpy(key_pressed, "µ"), 1);
+                    case VK_OEM_6:                  return (key_pressed = strcpy(key_pressed, "}"), 1);
+
+                }
+            default: // we assume that the default layout is US QWERTY
+                switch (vkCode) {
+                    case VK_OEM_PLUS:               return (key_pressed = strcpy(key_pressed, "+"), 1);
+                    case VK_OEM_MINUS:              return (key_pressed = strcpy(key_pressed, "_"), 1);
+                    case 0x39:                      return (key_pressed = strcpy(key_pressed, "("), 1);
+                    case 0x38:                      return (key_pressed = strcpy(key_pressed, "*"), 1);
+                    case 0x37:                      return (key_pressed = strcpy(key_pressed, "&"), 1);
+                    case 0x36:                      return (key_pressed = strcpy(key_pressed, "^"), 1);
+                    case 0x35:                      return (key_pressed = strcpy(key_pressed, "%"), 1);
+                    case 0x34:                      return (key_pressed = strcpy(key_pressed, "$"), 1);
+                    case 0x33:                      return (key_pressed = strcpy(key_pressed, "#"), 1);
+                    case 0x32:                      return (key_pressed = strcpy(key_pressed, "@"), 1);
+                    case 0x31:                      return (key_pressed = strcpy(key_pressed, "!"), 1);
+                    case 0x30:                      return (key_pressed = strcpy(key_pressed, ")"), 1);
+                    case VK_OEM_COMMA:              return (key_pressed = strcpy(key_pressed, "<"), 1);
+                    case VK_OEM_PERIOD:             return (key_pressed = strcpy(key_pressed, ">"), 1);
+                    case VK_OEM_1:                  return (key_pressed = strcpy(key_pressed, ":"), 1);
+                    case VK_OEM_2:                  return (key_pressed = strcpy(key_pressed, "?"), 1);
+                    case VK_OEM_4:                  return (key_pressed = strcpy(key_pressed, "{"), 1);
+                    case VK_OEM_5:                  return (key_pressed = strcpy(key_pressed, "|"), 1);
+                    case VK_OEM_6:                  return (key_pressed = strcpy(key_pressed, "}"), 1);
+                    case VK_OEM_7:                  return (key_pressed = strcpy(key_pressed, "\""), 1);
+                }
+            }
         return 0;
     }
 }
