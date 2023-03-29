@@ -1,7 +1,11 @@
+#define WIN32_LEAN_AND_MEAN
+#define _CRT_SECURE_NO_WARNINGS
+#define WINDOW_CLASS_NAME L"Winkey Window Class"
 #include <windows.h>
 #include <stdio.h>
+#pragma comment(lib, "user32.lib")
+#pragma warning(disable: 5045)
 
-#define WINDOW_CLASS_NAME L"Winkey Window Class"
 
 // This keyboard hook needs to remain global because we will reuse it within the hook callback.
 HHOOK keyboard_hook = NULL; 
@@ -28,7 +32,7 @@ static void print_last_error(char const *message)
      */
      
     DWORD code = GetLastError();
-    fprintf(stderr, "%s: no error message (error code %d)\n", message, code);
+    fprintf(stderr, "%s: no error message (error code %d)\n", message, (int)code);
 }
 
 static void log_key(char const *key, char const *c)
@@ -336,7 +340,7 @@ static char const *get_key_name(USHORT vk)
     }
 }
 
-static LRESULT wndproc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
+static LRESULT CALLBACK wndproc(HWND hwnd_, UINT msg, WPARAM wparam, LPARAM lparam)
 {
     /**
      * This callback is called by the windows message loop every time a
@@ -351,7 +355,7 @@ static LRESULT wndproc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
     {
         case WM_CHAR:
         case WM_SYSCHAR:
-            wchar_t character_code = wparam;
+            wchar_t character_code = (wchar_t)wparam;
 
             if (IS_LOW_SURROGATE(character_code))
                 low_surrogate = character_code;
@@ -373,11 +377,11 @@ static LRESULT wndproc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 
             return 0;
         default:
-            return DefWindowProcW(hwnd, msg, wparam, lparam);
+            return DefWindowProcW(hwnd_, msg, wparam, lparam);
     }
 }
 
-int hookproc(int code, WPARAM wparam, LPARAM lparam)
+int CALLBACK hookproc(int code, WPARAM wparam, LPARAM lparam)
 {
     if (code < 0)
         return CallNextHookEx(keyboard_hook, code, wparam, lparam);
@@ -388,7 +392,7 @@ int hookproc(int code, WPARAM wparam, LPARAM lparam)
         return 0;
 
 
-    key_saved = get_key_name(info->vkCode);
+    key_saved = get_key_name((USHORT)info->vkCode);
 
     PostMessageW(hwnd, wparam, info->vkCode, 0);
 
@@ -413,7 +417,7 @@ int main(void)
     ZeroMemory(&class_info, sizeof(class_info));
     class_info.cbSize = sizeof(class_info);
     class_info.hInstance = hinstance;
-    class_info.lpfnWndProc = wndproc;
+    class_info.lpfnWndProc = (WNDPROC) wndproc;
     class_info.lpszClassName = WINDOW_CLASS_NAME;
 
     ATOM class_atom = RegisterClassExW(&class_info);
