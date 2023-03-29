@@ -1,24 +1,36 @@
-CPP = cl
-CPPFLAGS = /Wall /WX /EHs
+# **************************************************************************** #
+#                                                                              #
+#                                                         :::      ::::::::    #
+#    Makefile                                           :+:      :+:    :+:    #
+#                                                     +:+ +:+         +:+      #
+#    By: emaugale <emaugale@student.42.fr>          +#+  +:+       +#+         #
+#                                                 +#+#+#+#+#+   +#+            #
+#    Created: 2023/03/29 22:37:34 by emaugale          #+#    #+#              #
+#    Updated: 2023/03/29 22:37:44 by emaugale         ###   ########.fr        #
+#                                                                              #
+# **************************************************************************** #
 
-SVCNAME = svc.exe
-WINKEYNAME = winkey.exe
+CC = cl.exe
+CFLAGS = /Wall /WX
 
-SVCOBJS = svc.obj
-WINKEYOBJS = winkey.obj
+SRCS = winkey.c
+OBJS = $(SRCS:.c=.obj)
 
-all: $(SVCNAME)
+all: winkey.exe
 
-$(SVCNAME):
--out:$(SVCNAME) $(SVCOBJS)
-
-$(WINKEYNAME):
--out:$(WINKEYNAME) $(WINKEYOBJS)
+winkey.exe: $(OBJS)
+    $(CC) $(CFLAGS) /Fe$@ $**
 
 clean:
- del $(SVCOBJS) $(WINKEYOBJS)
+    del *.obj
 
 fclean: clean
- del $(SVCNAME) $(WINKEYNAME)
+    del *.exe
 
 re: fclean all
+
+.c.obj:
+    $(CC) $(CFLAGS) /c $<
+
+
+.PHONY: all clean fclean re
