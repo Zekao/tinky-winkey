@@ -7,50 +7,9 @@
 HHOOK keyboard_hook = NULL; 
 
 // The handle to the window created to received keyboard messages.
-HWND hwnd = NULL;
+HWND hwnd = NULL;  // The handle to the window created to received keyboard messages.
 
-typedef enum
-{
-    /** An UTF-8 character. */
-    Event_Character,
-    /** A key press. */
-    Event_KeyPress,
-}   EventType;
-
-typedef struct
-{
-    /** The type of the event. */
-    EventType type;
-    union
-    {
-        char character[5];
-        USHORT key_press;
-    };
-} Event;
-
-size_t ring_buf_head = 0;
-size_t ring_buf_len = 0;
-
-#define RING_BUF_SIZE 16
-
-Event ring_buffer[RING_BUF_SIZE];
-
-static void enqueue_event(Event ev)
-{
-    if (ring_buf_len == RING_BUF_SIZE)
-        return
-
-    ring_buffer[ring_buf_head] = ev;
-    ++ring_buf_head;
-    ++ring_buf_len;
-    if (ring_buf_head == RING_BUF_SIZE);
-        ring_buf_head = 0;
-}
-
-static Event peek_event(size_t index)
-{
-    return ring_buffer[(ring_buf_head - ring_buf_len + index) % RING_BUF_SIZE];
-}
+char const *key_saved = NULL;
 
 static inline int to_utf8(wchar_t const *utf16, size_t utf16_len, char *utf8, size_t utf8_len)
 {
@@ -72,6 +31,79 @@ static void print_last_error(char const *message)
     fprintf(stderr, "%s: no error message (error code %d)\n", message, code);
 }
 
+static void log_key(char const *key, char const *c)
+{
+    /**
+     * Logs a key.
+     */
+
+    if (!key)
+        key = "[UNKNOWN]";
+    
+    if (!c)
+        c = "";
+
+    // Query the current timestamp.
+
+    SYSTEMTIME system_time;
+    GetLocalTime(&system_time);
+
+    // Query the name of the top-level window.
+    
+    wchar_t window_title_utf16[128];
+    char window_title_utf8[256] = "unknown";
+
+    HWND forground_hwnd = GetForegroundWindow();
+
+    if (forground_hwnd)
+    {
+        int count_utf16 = GetWindowTextW(forground_hwnd, window_title_utf16, 128);
+        if (count_utf16 != 0)
+        {
+            int count_utf8 = to_utf8(window_title_utf16, count_utf16, window_title_utf8, 255);
+            if (count_utf8 == 0)
+                strcpy(window_title_utf8, "unknown");
+            else
+                window_title_utf8[count_utf8] = '\0';
+        }
+    }
+
+    printf(
+        "[%02d:%02d:%02d.%03d] <%s> => %s %s\n",
+        system_time.wHour, system_time.wMinute,
+        system_time.wSecond, system_time.wMilliseconds,
+        window_title_utf8, key, c);
+}
+
+static void received_character(wchar_t *utf16, size_t utf16_len)
+{
+    /**
+     * This function is called when a new character is received.
+     * The character is encoded in UTF-16.
+     *
+     * This function assumes that `utf16_len` is less or equal to 2.
+     */
+    
+    char utf8[5];
+    
+    // Convert the characters into UTF-8.
+    int count = to_utf8(utf16, utf16_len, utf8, 4);
+    if (count == 0)
+        return;
+
+    utf8[count] = '\0';
+
+    // Filter some unwanted characters.
+    // Specifically: control characters should not be displayed.
+
+    if (count == 1 && utf8[0] <= 32)
+        return;
+
+    // Save the character.
+
+    log_key(key_saved, utf8);
+    key_saved = NULL;
+}
 
 static char const *get_key_name(USHORT vk)
 {
@@ -304,83 +336,6 @@ static char const *get_key_name(USHORT vk)
     }
 }
 
-static void log_key(USHORT vk, char const *c)
-{
-    /**
-     * Logs a key.
-     */
-
-    if (!c)
-        c = "";
-
-    char const *key_name = get_key_name(vk);
-    if (!key_name)
-        key_name = "[UNKNOWN]";
-
-    // Query the current timestamp.
-
-    SYSTEMTIME system_time;
-    GetLocalTime(&system_time);
-
-    // Query the name of the top-level window.
-    
-    wchar_t window_title_utf16[128];
-    char window_title_utf8[256] = "unknown";
-
-    HWND forground_hwnd = GetForegroundWindow();
-
-    if (forground_hwnd)
-    {
-        int count_utf16 = GetWindowTextW(forground_hwnd, window_title_utf16, 128);
-        if (count_utf16 != 0)
-        {
-            int count_utf8 = to_utf8(window_title_utf16, count_utf16, window_title_utf8, 255);
-            if (count_utf8 == 0)
-                strcpy(window_title_utf8, "unknown");
-            else
-                window_title_utf8[count_utf8] = '\0';
-        }
-    }
-
-    printf(
-        "[%02d:%02d:%02d.%03d] <%s> => %s %s\n",
-        system_time.wHour, system_time.wMinute,
-        system_time.wSecond, system_time.wMilliseconds,
-        window_title_utf8, key_name, c);
-}
-
-static void received_character(wchar_t *utf16, size_t utf16_len)
-{
-    /**
-     * This function is called when a new character is received.
-     * The character is encoded in UTF-16.
-     *
-     * This function assumes that `utf16_len` is less or equal to 2.
-     */
-    
-    char utf8[5];
-    
-    // Convert the characters into UTF-8.
-    int count = to_utf8(utf16, utf16_len, utf8, 4);
-    if (count == 0)
-        return;
-
-    utf8[count] = '\0';
-
-    // Filter some unwanted characters.
-    // Specifically: control characters should not be displayed.
-
-    if (count == 1 && utf8[0] <= 32)
-        return;
-
-    // Save the character.
-
-    enqueue_event((Event){
-        .type = Event_Character,
-        .character = utf8,
-    });
-}
-
 static LRESULT wndproc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 {
     /**
@@ -433,13 +388,10 @@ int hookproc(int code, WPARAM wparam, LPARAM lparam)
         return 0;
 
 
-    enqueue_event((Event){
-        .type = Event_KeyPress,
-        .key_press = info->vkCode,
-    });
+    key_saved = get_key_name(info->vkCode);
 
     PostMessageW(hwnd, wparam, info->vkCode, 0);
-    
+
     return 0;
 }
 
@@ -511,30 +463,14 @@ int main(void)
         TranslateMessage(&msg);
         DispatchMessageW(&msg);
 
-        while (ring_buf_len != 0)
+        if (PeekMessageW(&msg, hwnd, 0, 0, PM_REMOVE))
         {
-            Event a = peek_event(0);
+            TranslateMessage(&msg);
+            DispatchMessageW(&msg);
+        }
 
-            if (ring_buf_len >= 2)
-            {
-                Event b = peek_event(1);
-
-                if (a.type == Event_KeyPress && b.type == Event_Character)
-                {
-                    log_key(a.key_press, b.character);
-
-                    ring_buf_len -= 2;
-                }
-            }
-            else
-            {
-                if (a.type == Event_KeyPress)
-                    log_key(a.key_press, NULL);
-                else if (a.type == Event_Character)
-                    log_key(0, a.character);
-
-                --ring_buf_len;
-            }
+        if (key_saved) {
+            log_key(key_saved, NULL);
         }
     }
 }
