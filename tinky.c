@@ -10,7 +10,7 @@
 
 #pragma comment(lib, "advapi32.lib")
 #define TINKY_NAME L"Tinky"
-
+#define LOGGER_PATH L"C:\\Users\\Zekao\\Documents\\GitHub\\tinky-winkey\\winkey.exe"
 SERVICE_STATUS st;
 HANDLE service_stop_event;
 
@@ -146,7 +146,7 @@ static VOID WINAPI svc_main(DWORD argc, LPTSTR *argv)
     }
 
     PROCESS_INFORMATION process_info;
-    if (CreateProcessAsUserW(system_token, L"C:\\Users\\Zekao\\Documents\\GitHub\\tinky-winkey\\winkey.exe", L"winkey.exe", NULL, NULL, TRUE, BELOW_NORMAL_PRIORITY_CLASS, NULL, NULL, &startup_info, &process_info) == FALSE)
+    if (CreateProcessAsUserW(system_token, LOGGER_PATH, L"winkey.exe", NULL, NULL, TRUE, BELOW_NORMAL_PRIORITY_CLASS, NULL, NULL, &startup_info, &process_info) == FALSE)
     {
         fprintf(stderr, "Failed to spawn Tinkey. (error code %d)", (int)GetLastError());
 
